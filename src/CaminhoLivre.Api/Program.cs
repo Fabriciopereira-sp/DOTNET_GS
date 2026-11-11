@@ -10,6 +10,7 @@ builder.Services.AddBancoDeDados();
 builder.AddAutenticacaoJwt();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ReporteService>();
+builder.Services.AddScoped<GestorService>();
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddEndpointsApiExplorer();
@@ -57,6 +58,7 @@ app.UseAuthorization();
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapCatalogoEndpoints();
 app.MapReporteEndpoints();
+app.MapGestorEndpoints();
 
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Auth:HabilitarTokenDeTeste"))
 {
