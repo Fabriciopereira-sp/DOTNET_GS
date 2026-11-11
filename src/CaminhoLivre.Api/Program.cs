@@ -12,6 +12,7 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ReporteService>();
 builder.Services.AddScoped<GestorService>();
 builder.Services.AddScoped<CategoriaService>();
+builder.Services.AddScoped<IdempotenciaService>();
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddEndpointsApiExplorer();

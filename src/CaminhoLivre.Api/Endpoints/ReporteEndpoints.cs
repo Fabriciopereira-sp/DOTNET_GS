@@ -1,9 +1,11 @@
 using System.Security.Claims;
+using System.Text;
 using CaminhoLivre.Api.Auth;
 using CaminhoLivre.Api.Contracts;
 using CaminhoLivre.Api.Domain;
 using CaminhoLivre.Api.Services;
 using CaminhoLivre.Api.Validation;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CaminhoLivre.Api.Endpoints;
 
@@ -16,8 +18,22 @@ public static class ReporteEndpoints
             .WithOpenApi()
             .RequireAuthorization();
 
-        grupo.MapPost("/", async (CriarReporteRequest request, ClaimsPrincipal user, ReporteService service) =>
+        grupo.MapPost("/", async (
+                CriarReporteRequest request,
+                [FromHeader(Name = IdempotenciaService.Cabecalho)] string? chaveIdempotencia,
+                ClaimsPrincipal user,
+                HttpContext http,
+                ReporteService service,
+                IdempotenciaService idempotencia) =>
             {
+                if (string.IsNullOrWhiteSpace(chaveIdempotencia) || chaveIdempotencia.Trim().Length > 100)
+                {
+                    return Results.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        [IdempotenciaService.Cabecalho] = ["Envie o cabeçalho Idempotency-Key (um UUID gerado pelo app), com até 100 caracteres."]
+                    });
+                }
+
                 var erros = ReporteValidator.Validar(request);
                 if (erros.Count > 0)
                 {
@@ -39,16 +55,50 @@ public static class ReporteEndpoints
                     });
                 }
 
-                var reporte = await service.CriarAsync(usuarioId, categoria, request);
-                return Results.Created($"/api/reportes/{reporte.Id}", ReporteMapper.ParaResponse(reporte));
+                var hash = IdempotenciaService.CalcularHash(request);
+                var reserva = await idempotencia.ReservarAsync(chaveIdempotencia.Trim(), usuarioId, hash);
+
+                switch (reserva.Situacao)
+                {
+                    case SituacaoIdempotencia.Repetida:
+                        http.Response.Headers["Idempotent-Replayed"] = "true";
+                        return Results.Content(reserva.Registro!.RespostaJson, "application/json", Encoding.UTF8, reserva.Registro.StatusHttp);
+
+                    case SituacaoIdempotencia.CorpoDiferente:
+                        return Results.Problem(
+                            statusCode: StatusCodes.Status422UnprocessableEntity,
+                            title: "Chave de idempotência já usada",
+                            detail: "Esta Idempotency-Key já foi usada com outro conteúdo. Gere uma nova chave para um novo reporte.");
+
+                    case SituacaoIdempotencia.EmProcessamento:
+                        return Results.Problem(
+                            statusCode: StatusCodes.Status409Conflict,
+                            title: "Requisição em processamento",
+                            detail: "Uma requisição com esta Idempotency-Key ainda está sendo processada.");
+                }
+
+                try
+                {
+                    var reporte = await service.CriarAsync(usuarioId, categoria, request);
+                    var resposta = ReporteMapper.ParaResponse(reporte);
+                    await idempotencia.ConcluirAsync(reserva.Registro!, StatusCodes.Status201Created, resposta);
+                    return Results.Created($"/api/reportes/{reporte.Id}", resposta);
+                }
+                catch
+                {
+                    await idempotencia.LiberarAsync(reserva.Registro!);
+                    throw;
+                }
             })
             .RequireAuthorization(Politicas.Cidadao)
             .WithName("CriarReporte")
-            .WithSummary("Registra um novo reporte de problema no espaço público")
+            .WithSummary("Registra um novo reporte. Exige o cabeçalho Idempotency-Key: repetir a mesma requisição devolve o mesmo reporte")
             .Produces<ReporteResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
+            .Produces(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         grupo.MapGet("/meus", async (ClaimsPrincipal user, ReporteService service, int page = 0, int size = 10) =>
             {

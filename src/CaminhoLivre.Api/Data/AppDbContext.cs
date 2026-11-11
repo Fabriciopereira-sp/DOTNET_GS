@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Categoria> Categorias => Set<Categoria>();
     public DbSet<Reporte> Reportes => Set<Reporte>();
     public DbSet<HistoricoStatus> HistoricosStatus => Set<HistoricoStatus>();
+    public DbSet<RegistroIdempotencia> RegistrosIdempotencia => Set<RegistroIdempotencia>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +65,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.StatusAnterior).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.StatusNovo).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Observacao).HasMaxLength(300);
+        });
+
+        modelBuilder.Entity<RegistroIdempotencia>(e =>
+        {
+            e.ToTable("CL_IDEMPOTENCIA");
+            e.HasKey(x => new { x.Chave, x.UsuarioId });
+            e.Property(x => x.Chave).HasMaxLength(100);
+            e.Property(x => x.HashCorpo).HasMaxLength(64).IsRequired();
         });
 
         // Padrão do banco do grupo: colunas em maiúsculas separadas por underline (ex.: ORGAO_ID)
