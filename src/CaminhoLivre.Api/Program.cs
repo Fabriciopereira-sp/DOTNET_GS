@@ -1,6 +1,7 @@
 using CaminhoLivre.Api.Auth;
 using CaminhoLivre.Api.Data;
 using CaminhoLivre.Api.Endpoints;
+using CaminhoLivre.Api.Health;
 using CaminhoLivre.Api.Infra;
 using CaminhoLivre.Api.Services;
 using Microsoft.Extensions.FileProviders;
@@ -21,6 +22,11 @@ builder.Services.AddLimiteDeRequisicoes(builder.Configuration);
 var pastaDeFotos = Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["Uploads:Pasta"] ?? "uploads");
 Directory.CreateDirectory(pastaDeFotos);
 builder.Services.AddSingleton<IArmazenamentoDeFotos>(new ArmazenamentoLocalDeFotos(pastaDeFotos));
+
+builder.Services.AddVerificacoesDeSaude(pastaDeFotos);
+
+// Erros sempre no formato ProblemDetails (RFC 7807). Fora de desenvolvimento, sem stack trace para o usuário.
+builder.Services.AddProblemDetails();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -58,6 +64,9 @@ var app = builder.Build();
 
 await app.InicializarBancoAsync();
 
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(pastaDeFotos),
@@ -75,6 +84,7 @@ app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapCatalogoEndpoints();
 app.MapReporteEndpoints();
 app.MapGestorEndpoints();
+app.MapVerificacoesDeSaude();
 
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Auth:HabilitarTokenDeTeste"))
 {
