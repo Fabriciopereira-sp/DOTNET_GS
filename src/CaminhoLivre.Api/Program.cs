@@ -3,6 +3,7 @@ using CaminhoLivre.Api.Data;
 using CaminhoLivre.Api.Endpoints;
 using CaminhoLivre.Api.Infra;
 using CaminhoLivre.Api.Services;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,10 @@ builder.Services.AddScoped<CategoriaService>();
 builder.Services.AddScoped<IdempotenciaService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddLimiteDeRequisicoes(builder.Configuration);
+
+var pastaDeFotos = Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["Uploads:Pasta"] ?? "uploads");
+Directory.CreateDirectory(pastaDeFotos);
+builder.Services.AddSingleton<IArmazenamentoDeFotos>(new ArmazenamentoLocalDeFotos(pastaDeFotos));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -52,6 +57,12 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 await app.InicializarBancoAsync();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(pastaDeFotos),
+    RequestPath = ArmazenamentoLocalDeFotos.CaminhoPublico
+});
 
 app.UseSwagger();
 app.UseSwaggerUI();

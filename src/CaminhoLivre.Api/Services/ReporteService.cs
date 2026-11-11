@@ -88,6 +88,13 @@ public class ReporteService(AppDbContext db, TimeProvider relogio)
         await db.SaveChangesAsync();
     }
 
+    public async Task DefinirFotoAsync(Reporte reporte, string fotoUrl)
+    {
+        reporte.FotoUrl = fotoUrl;
+        reporte.AtualizadoEm = Agora;
+        await db.SaveChangesAsync();
+    }
+
     public async Task CancelarAsync(Reporte reporte, long usuarioId)
     {
         reporte.Historico.Add(NovoHistorico(reporte.Status, StatusReporte.CANCELADO, "Cancelado pelo cidadão.", usuarioId));

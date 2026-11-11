@@ -170,6 +170,55 @@ public static class ReporteEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        grupo.MapPost("/{id:long}/foto", async (
+                long id,
+                IFormFile? foto,
+                ClaimsPrincipal user,
+                ReporteService service,
+                IArmazenamentoDeFotos armazenamento,
+                CancellationToken cancellationToken) =>
+            {
+                var reporte = await service.BuscarCompletoAsync(id);
+                if (reporte is null || reporte.UsuarioId != user.ObterUsuarioId())
+                {
+                    return Results.NotFound();
+                }
+
+                if (!RegrasReporte.PodeSerEditado(reporte.Status))
+                {
+                    return Conflito("A foto só pode ser alterada enquanto o reporte estiver ABERTO.");
+                }
+
+                var (extensao, erro) = await FotoValidator.ValidarAsync(foto, cancellationToken);
+                if (erro is not null)
+                {
+                    return Results.ValidationProblem(new Dictionary<string, string[]> { ["foto"] = [erro] });
+                }
+
+                await using var conteudo = foto!.OpenReadStream();
+                var novaUrl = await armazenamento.SalvarAsync(conteudo, extensao!, cancellationToken);
+
+                var urlAnterior = reporte.FotoUrl;
+                await service.DefinirFotoAsync(reporte, novaUrl);
+
+                if (urlAnterior is not null)
+                {
+                    await armazenamento.ExcluirAsync(urlAnterior, cancellationToken);
+                }
+
+                return Results.Ok(ReporteMapper.ParaResponse(reporte));
+            })
+            .RequireAuthorization(Politicas.Cidadao)
+            .DisableAntiforgery()
+            .WithName("EnviarFotoDoReporte")
+            .WithSummary("Envia ou troca a foto do próprio reporte (JPEG ou PNG, até 5 MB)")
+            .Produces<ReporteResponse>(StatusCodes.Status200OK)
+            .ProducesValidationProblem()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         grupo.MapDelete("/{id:long}", async (long id, ClaimsPrincipal user, ReporteService service) =>
             {
                 var usuarioId = user.ObterUsuarioId();

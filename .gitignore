@@ -9,3 +9,4 @@ obj/
 *.db-wal
 .env
 TestResults/
+uploads/
