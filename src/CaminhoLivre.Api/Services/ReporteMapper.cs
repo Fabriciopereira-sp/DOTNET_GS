@@ -21,4 +21,15 @@ public static class ReporteMapper
         r.Prioridade,
         r.CriadoEm,
         r.AtualizadoEm);
+
+    public static ReporteDetalheResponse ParaDetalhe(Reporte r) => new(
+        ParaResponse(r),
+        r.Historico
+            .OrderBy(h => h.CriadoEm)
+            .ThenBy(h => h.Id)
+            .Select(h => new HistoricoStatusResponse(
+                h.StatusAnterior?.ToString(),
+                h.StatusNovo.ToString(),
+                h.Observacao,
+                h.CriadoEm)));
 }
