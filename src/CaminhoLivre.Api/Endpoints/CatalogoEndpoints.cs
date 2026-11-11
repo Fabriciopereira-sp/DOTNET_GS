@@ -10,7 +10,8 @@ public static class CatalogoEndpoints
     {
         var grupo = app.MapGroup("/api")
             .WithTags("Catálogo")
-            .WithOpenApi();
+            .WithOpenApi()
+            .RequireAuthorization();
 
         grupo.MapGet("/orgaos", async (AppDbContext db) =>
             {
@@ -19,7 +20,8 @@ public static class CatalogoEndpoints
             })
             .WithName("ListarOrgaos")
             .WithSummary("Lista os órgãos públicos que atendem os reportes")
-            .Produces<IEnumerable<OrgaoResponse>>(StatusCodes.Status200OK);
+            .Produces<IEnumerable<OrgaoResponse>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         grupo.MapGet("/categorias", async (AppDbContext db) =>
             {
@@ -33,7 +35,8 @@ public static class CatalogoEndpoints
             })
             .WithName("ListarCategorias")
             .WithSummary("Lista as categorias de problema e o órgão responsável por cada uma")
-            .Produces<IEnumerable<CategoriaResponse>>(StatusCodes.Status200OK);
+            .Produces<IEnumerable<CategoriaResponse>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         return app;
     }
