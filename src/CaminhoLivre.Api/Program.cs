@@ -1,6 +1,7 @@
 using CaminhoLivre.Api.Auth;
 using CaminhoLivre.Api.Data;
 using CaminhoLivre.Api.Endpoints;
+using CaminhoLivre.Api.Services;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddBancoDeDados();
 builder.AddAutenticacaoJwt();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<ReporteService>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -53,6 +56,7 @@ app.UseAuthorization();
 
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapCatalogoEndpoints();
+app.MapReporteEndpoints();
 
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Auth:HabilitarTokenDeTeste"))
 {
