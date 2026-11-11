@@ -3,6 +3,7 @@ using System.Text;
 using CaminhoLivre.Api.Auth;
 using CaminhoLivre.Api.Contracts;
 using CaminhoLivre.Api.Domain;
+using CaminhoLivre.Api.Infra;
 using CaminhoLivre.Api.Services;
 using CaminhoLivre.Api.Validation;
 using Microsoft.AspNetCore.Mvc;
@@ -91,6 +92,7 @@ public static class ReporteEndpoints
                 }
             })
             .RequireAuthorization(Politicas.Cidadao)
+            .RequireRateLimiting(LimiteDeRequisicoesExtensions.PoliticaCriacaoReporte)
             .WithName("CriarReporte")
             .WithSummary("Registra um novo reporte. Exige o cabeçalho Idempotency-Key: repetir a mesma requisição devolve o mesmo reporte")
             .Produces<ReporteResponse>(StatusCodes.Status201Created)
@@ -98,7 +100,8 @@ public static class ReporteEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         grupo.MapGet("/meus", async (ClaimsPrincipal user, ReporteService service, int page = 0, int size = 10) =>
             {

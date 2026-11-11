@@ -1,6 +1,7 @@
 using CaminhoLivre.Api.Auth;
 using CaminhoLivre.Api.Data;
 using CaminhoLivre.Api.Endpoints;
+using CaminhoLivre.Api.Infra;
 using CaminhoLivre.Api.Services;
 using Microsoft.OpenApi.Models;
 
@@ -14,6 +15,7 @@ builder.Services.AddScoped<GestorService>();
 builder.Services.AddScoped<CategoriaService>();
 builder.Services.AddScoped<IdempotenciaService>();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddLimiteDeRequisicoes(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -56,6 +58,7 @@ app.UseSwaggerUI();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapCatalogoEndpoints();
