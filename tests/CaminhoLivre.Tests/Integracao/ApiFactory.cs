@@ -2,6 +2,7 @@ using CaminhoLivre.Api.Auth;
 using CaminhoLivre.Api.Data;
 using CaminhoLivre.Api.Domain;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CaminhoLivre.Tests.Integracao;
@@ -39,6 +40,13 @@ public class ApiFactory : WebApplicationFactory<Program>
         db.Usuarios.Add(usuario);
         await db.SaveChangesAsync();
         return usuario;
+    }
+
+    public async Task<long> ObterOrgaoIdAsync(AreaOrgao area)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return (await db.Orgaos.FirstAsync(o => o.Area == area)).Id;
     }
 
     public string GerarToken(Usuario usuario)

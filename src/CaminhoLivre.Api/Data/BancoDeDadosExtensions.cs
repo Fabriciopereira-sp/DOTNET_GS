@@ -4,7 +4,10 @@ namespace CaminhoLivre.Api.Data;
 
 public static class BancoDeDadosExtensions
 {
-    // Database:Provider = "Sqlite" (padrão, roda em qualquer máquina) ou "Oracle" (banco do grupo)
+    // Database:Provider escolhe o banco sem mudar o código:
+    //   "Sqlite"    padrão, roda em qualquer máquina sem instalar nada
+    //   "Oracle"    banco do grupo (tabelas criadas pelo script-bd.sql)
+    //   "SqlServer" Azure SQL, opção para o deploy na nuvem
     public static IServiceCollection AddBancoDeDados(this IServiceCollection services)
     {
         services.AddDbContext<AppDbContext>((sp, options) =>
@@ -12,13 +15,18 @@ public static class BancoDeDadosExtensions
             var config = sp.GetRequiredService<IConfiguration>();
             var provider = config["Database:Provider"] ?? "Sqlite";
 
-            if (provider.Equals("Oracle", StringComparison.OrdinalIgnoreCase))
+            switch (provider.ToLowerInvariant())
             {
-                options.UseOracle(config.GetConnectionString("Oracle"));
-            }
-            else
-            {
-                options.UseSqlite(config.GetConnectionString("Sqlite"));
+                case "oracle":
+                    options.UseOracle(ConexaoObrigatoria(config, "Oracle"));
+                    break;
+                case "sqlserver":
+                    options.UseSqlServer(ConexaoObrigatoria(config, "SqlServer"),
+                        sql => sql.EnableRetryOnFailure(maxRetryCount: 5));
+                    break;
+                default:
+                    options.UseSqlite(config.GetConnectionString("Sqlite"));
+                    break;
             }
         });
 
@@ -30,8 +38,11 @@ public static class BancoDeDadosExtensions
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        // No Oracle as tabelas são criadas pelo script-bd.sql (sem migrations, decisão D4 do grupo)
-        if (!db.Database.IsSqlite())
+        // SQLite: sempre cria as tabelas e os dados de teste.
+        // Oracle e SQL Server: só se Database:CriarTabelasAoIniciar = true. No Oracle do grupo as
+        // tabelas vêm do script-bd.sql (sem migrations, decisão D4).
+        var criar = db.Database.IsSqlite() || app.Configuration.GetValue<bool>("Database:CriarTabelasAoIniciar");
+        if (!criar)
         {
             return;
         }
@@ -39,4 +50,9 @@ public static class BancoDeDadosExtensions
         await db.Database.EnsureCreatedAsync();
         await DbSeed.PopularAsync(db);
     }
+
+    private static string ConexaoObrigatoria(IConfiguration config, string nome) =>
+        config.GetConnectionString(nome) is { Length: > 0 } conexao
+            ? conexao
+            : throw new InvalidOperationException($"Configure a variável de ambiente ConnectionStrings__{nome}.");
 }

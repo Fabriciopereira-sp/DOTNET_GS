@@ -61,7 +61,7 @@ public class AutenticacaoTests(ApiFactory api)
     [Fact]
     public async Task GestorCriandoReporte_Retorna403()
     {
-        var cliente = await api.ClienteAutenticadoAsync(Papeis.Gestor, orgaoId: 1);
+        var cliente = await api.ClienteAutenticadoAsync(Papeis.Gestor, await api.ObterOrgaoIdAsync(AreaOrgao.OBRAS));
 
         var resposta = await cliente.CriarReporteAsync(Requisicoes.NovoReporte());
 
