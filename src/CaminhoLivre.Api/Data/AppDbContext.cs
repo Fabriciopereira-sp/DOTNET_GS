@@ -17,7 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         modelBuilder.Entity<Usuario>(e =>
         {
-            e.ToTable("CL_USUARIO");
+            e.ToTable("VV_USUARIO");
             e.Property(x => x.Nome).HasMaxLength(120).IsRequired();
             e.Property(x => x.Email).HasMaxLength(150).IsRequired();
             e.Property(x => x.Role).HasMaxLength(20).IsRequired();
@@ -27,14 +27,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Orgao>(e =>
         {
-            e.ToTable("CL_ORGAO");
+            e.ToTable("VV_ORGAO");
             e.Property(x => x.Nome).HasMaxLength(120).IsRequired();
             e.Property(x => x.Area).HasConversion<string>().HasMaxLength(20);
         });
 
         modelBuilder.Entity<Categoria>(e =>
         {
-            e.ToTable("CL_CATEGORIA");
+            e.ToTable("VV_CATEGORIA");
             e.Property(x => x.Codigo).HasMaxLength(30).IsRequired();
             e.Property(x => x.Nome).HasMaxLength(80).IsRequired();
             e.HasIndex(x => x.Codigo).IsUnique();
@@ -43,7 +43,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Reporte>(e =>
         {
-            e.ToTable("CL_REPORTE");
+            e.ToTable("VV_REPORTE");
             e.Property(x => x.Protocolo).HasMaxLength(20).IsRequired();
             e.HasIndex(x => x.Protocolo).IsUnique();
             e.Property(x => x.Descricao).HasMaxLength(500).IsRequired();
@@ -61,7 +61,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<HistoricoStatus>(e =>
         {
-            e.ToTable("CL_HISTORICO_STATUS");
+            e.ToTable("VV_HISTORICO_STATUS");
             e.Property(x => x.StatusAnterior).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.StatusNovo).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Observacao).HasMaxLength(300);
@@ -69,7 +69,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<RegistroIdempotencia>(e =>
         {
-            e.ToTable("CL_IDEMPOTENCIA");
+            e.ToTable("VV_IDEMPOTENCIA");
             e.HasKey(x => new { x.Chave, x.UsuarioId });
             e.Property(x => x.Chave).HasMaxLength(100);
             e.Property(x => x.HashCorpo).HasMaxLength(64).IsRequired();

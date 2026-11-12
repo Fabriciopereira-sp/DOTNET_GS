@@ -33,7 +33,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Caminho Livre - API de Zeladoria",
+        Title = "Voz & Via - API de Zeladoria",
         Version = "v1",
         Description = "Reportes de barreiras de acessibilidade e problemas em espaços públicos, feitos pelo cidadão e atendidos pelo órgão responsável."
     });

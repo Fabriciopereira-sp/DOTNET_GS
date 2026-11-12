@@ -11,7 +11,7 @@ public static class RegrasReporte
         [StatusReporte.CANCELADO] = []
     };
 
-    public static string GerarProtocolo(long id, int ano) => $"CL-{ano}-{id:D6}";
+    public static string GerarProtocolo(long id, int ano) => $"VV-{ano}-{id:D6}";
 
     // Prioridade da fila do gestor: peso da urgência + 2 pontos por dia em aberto (até 30 dias).
     public static int CalcularPrioridade(Urgencia urgencia, DateTime criadoEm, DateTime agora)
