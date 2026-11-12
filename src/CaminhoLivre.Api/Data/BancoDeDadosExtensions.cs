@@ -21,8 +21,9 @@ public static class BancoDeDadosExtensions
                     options.UseOracle(ConexaoObrigatoria(config, "Oracle"));
                     break;
                 case "sqlserver":
-                    options.UseSqlServer(ConexaoObrigatoria(config, "SqlServer"),
-                        sql => sql.EnableRetryOnFailure(maxRetryCount: 5));
+                    // Sem EnableRetryOnFailure: a criação do reporte usa transação própria,
+                    // e a estratégia de nova tentativa do SQL Server não aceita transações abertas pelo código.
+                    options.UseSqlServer(ConexaoObrigatoria(config, "SqlServer"));
                     break;
                 default:
                     options.UseSqlite(config.GetConnectionString("Sqlite"));

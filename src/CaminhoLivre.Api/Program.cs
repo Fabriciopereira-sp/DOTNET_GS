@@ -74,7 +74,11 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Voz & Via - API de Zeladoria v1");
+    options.DocumentTitle = "Voz & Via - API de Zeladoria";
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
