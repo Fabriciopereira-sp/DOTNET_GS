@@ -41,7 +41,7 @@ public class GestorService(AppDbContext db, TimeProvider relogio)
             .Include(r => r.Orgao)
             .OrderByDescending(r => r.Prioridade)
             .ThenBy(r => r.CriadoEm)
-            .Skip(pagina * tamanho)
+            .Skip((pagina - 1) * tamanho)
             .Take(tamanho)
             .ToListAsync();
 

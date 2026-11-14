@@ -25,7 +25,7 @@ public static class TokenTesteEndpoints
                 var usuario = await db.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Email == email);
                 if (usuario is null)
                 {
-                    return Results.NotFound();
+                    return Respostas.NaoEncontrado("Usuário de teste não encontrado. Veja a lista no README.");
                 }
 
                 var (token, expiraEm) = tokens.Gerar(usuario);

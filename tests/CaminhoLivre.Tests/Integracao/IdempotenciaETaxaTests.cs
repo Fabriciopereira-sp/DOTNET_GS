@@ -36,7 +36,7 @@ public class IdempotenciaETaxaTests(ApiFactory api)
         Assert.Equal(HttpStatusCode.Created, segunda.StatusCode);
         Assert.Equal(reportePrimeira!.Protocolo, reporteSegunda!.Protocolo);
         Assert.True(segunda.Headers.Contains("Idempotent-Replayed"));
-        Assert.Equal(1, meus!.TotalItens);
+        Assert.Equal(1, meus!.Total);
     }
 
     [Fact]

@@ -16,6 +16,10 @@ public class ArmazenamentoLocalDeFotos(string pasta) : IArmazenamentoDeFotos
         return $"{CaminhoPublico}/{nomeArquivo}";
     }
 
+    public bool Existe(string url) =>
+        url.StartsWith($"{CaminhoPublico}/", StringComparison.Ordinal)
+        && File.Exists(Path.Combine(pasta, Path.GetFileName(url)));
+
     public Task ExcluirAsync(string url, CancellationToken cancellationToken)
     {
         var nomeArquivo = Path.GetFileName(url);

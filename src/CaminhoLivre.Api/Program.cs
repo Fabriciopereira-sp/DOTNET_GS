@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CaminhoLivre.Api.Auth;
 using CaminhoLivre.Api.Data;
 using CaminhoLivre.Api.Endpoints;
@@ -27,6 +28,10 @@ builder.Services.AddVerificacoesDeSaude(pastaDeFotos);
 
 // Erros sempre no formato ProblemDetails (RFC 7807). Fora de desenvolvimento, sem stack trace para o usuário.
 builder.Services.AddProblemDetails();
+
+// JSON em camelCase (padrão) e enums sempre como texto ("ALTA", "ABERTO").
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -87,6 +92,7 @@ app.UseRateLimiter();
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapCatalogoEndpoints();
 app.MapReporteEndpoints();
+app.MapFotoEndpoints();
 app.MapGestorEndpoints();
 app.MapVerificacoesDeSaude();
 

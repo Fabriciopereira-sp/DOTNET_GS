@@ -35,7 +35,7 @@ public static class CatalogoEndpoints
         grupo.MapGet("/categorias/{id:long}", async (long id, CategoriaService service) =>
                 await service.BuscarAsync(id) is { } categoria
                     ? Results.Ok(CategoriaService.ParaResponse(categoria))
-                    : Results.NotFound())
+                    : Respostas.NaoEncontrado("Categoria não encontrada."))
             .WithName("BuscarCategoria")
             .WithSummary("Busca uma categoria pelo ID")
             .Produces<CategoriaResponse>(StatusCodes.Status200OK)
@@ -67,7 +67,7 @@ public static class CatalogoEndpoints
                 var categoria = await service.BuscarAsync(id);
                 if (categoria is null)
                 {
-                    return Results.NotFound();
+                    return Respostas.NaoEncontrado("Categoria não encontrada.");
                 }
 
                 var erro = await ValidarAsync(request, service, id);
@@ -94,7 +94,7 @@ public static class CatalogoEndpoints
                 var categoria = await service.BuscarAsync(id);
                 if (categoria is null)
                 {
-                    return Results.NotFound();
+                    return Respostas.NaoEncontrado("Categoria não encontrada.");
                 }
 
                 if (await service.PossuiReportesAsync(id))

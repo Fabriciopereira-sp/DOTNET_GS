@@ -22,7 +22,7 @@ public static class GestorEndpoints
                 string? status,
                 string? urgencia,
                 string? categoria,
-                int page = 0,
+                int page = 1,
                 int size = 10) =>
             {
                 var erros = ReporteValidator.ValidarPaginacao(page, size);
@@ -91,7 +91,7 @@ public static class GestorEndpoints
                 var reporte = await service.BuscarDoOrgaoAsync(id, orgaoId.Value);
                 if (reporte is null)
                 {
-                    return Results.NotFound();
+                    return Respostas.NaoEncontrado("Reporte não encontrado entre os reportes do seu órgão.");
                 }
 
                 // Cancelamento é uma ação do cidadão; o gestor segue o fluxo de atendimento.

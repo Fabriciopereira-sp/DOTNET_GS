@@ -31,6 +31,7 @@ public class ReporteService(AppDbContext db, TimeProvider relogio)
             Latitude = request.Latitude!.Value,
             Longitude = request.Longitude!.Value,
             Endereco = string.IsNullOrWhiteSpace(request.Endereco) ? null : request.Endereco.Trim(),
+            FotoUrl = request.FotoUrl,
             Urgencia = urgencia,
             Status = StatusReporte.ABERTO,
             Prioridade = RegrasReporte.CalcularPrioridade(urgencia, agora, agora),
@@ -65,7 +66,7 @@ public class ReporteService(AppDbContext db, TimeProvider relogio)
             .Include(r => r.Categoria)
             .Include(r => r.Orgao)
             .OrderByDescending(r => r.CriadoEm)
-            .Skip(pagina * tamanho)
+            .Skip((pagina - 1) * tamanho)
             .Take(tamanho)
             .ToListAsync();
 
@@ -84,6 +85,7 @@ public class ReporteService(AppDbContext db, TimeProvider relogio)
     {
         reporte.Descricao = request.Descricao!.Trim();
         reporte.Endereco = string.IsNullOrWhiteSpace(request.Endereco) ? null : request.Endereco.Trim();
+        reporte.FotoUrl = request.FotoUrl;
         reporte.AtualizadoEm = Agora;
         await db.SaveChangesAsync();
     }

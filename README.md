@@ -126,11 +126,12 @@ Contrato do token (igual ao da API Java): HS256, emissor `voz-e-via-java`, públ
 | Método | Rota | Papel | O que faz |
 |---|---|---|---|
 | POST | `/api/reportes` | CIDADAO | Cria um reporte (exige `Idempotency-Key`) e gera o protocolo `VV-AAAA-NNNNNN` |
-| GET | `/api/reportes/meus?page=0&size=10` | CIDADAO | Lista os reportes do usuário |
+| POST | `/api/fotos` | CIDADAO | Envia a foto (campo `arquivo`, JPEG ou PNG até 5 MB) e devolve `{ fotoUrl }` |
+| GET | `/api/reportes/meus?page=1&size=10` | CIDADAO | Lista os reportes do usuário (página começa em 1, tamanho até 50) |
 | GET | `/api/reportes/{id}` | dono ou GESTOR do órgão | Detalhe com histórico de status |
-| PUT | `/api/reportes/{id}` | CIDADAO dono | Edita descrição e endereço enquanto ABERTO |
+| PUT | `/api/reportes/{id}` | CIDADAO dono | Substitui `descricao`, `endereco` e `fotoUrl` enquanto ABERTO (null = sem endereço / sem foto) |
 | DELETE | `/api/reportes/{id}` | CIDADAO dono | Cancela o reporte enquanto ABERTO |
-| POST | `/api/reportes/{id}/foto` | CIDADAO dono | Envia a foto (JPEG ou PNG, até 5 MB) |
+| POST | `/api/reportes/{id}/foto` | CIDADAO dono | Alternativa: envia a foto direto para um reporte já criado |
 | GET | `/api/gestor/reportes?status=&urgencia=&categoria=` | GESTOR | Fila do órgão, ordenada por prioridade |
 | PATCH | `/api/gestor/reportes/{id}/status` | GESTOR | Muda o status seguindo o fluxo e grava o histórico |
 | GET | `/api/categorias` e `/api/categorias/{id}` | autenticado | Lista e consulta categorias |
@@ -161,7 +162,7 @@ As chaves ficam na tabela `VV_IDEMPOTENCIA` por 24 horas.
 
 ## Integração com o grupo
 
-- **Mobile:** consome os endpoints acima, enviando o token do login da API Java e o cabeçalho `Idempotency-Key` ao criar reportes.
+- **Mobile:** consome os endpoints acima, enviando o token do login da API Java e o cabeçalho `Idempotency-Key` ao criar reportes. Fluxo da foto: `POST /api/fotos` primeiro e depois o reporte com a `fotoUrl` recebida (só são aceitas URLs geradas pela própria API). Respostas em camelCase, enums como texto (`"ALTA"`, `"ABERTO"`), datas em ISO 8601 UTC e erros no formato ProblemDetails com `detail` em português e `errors` por campo.
 - **Banco de Dados:** `scripts/oracle-tabelas-dotnet.sql` traz as tabelas da API .NET no formato que a API espera, para entrar no script do grupo.
 - **DevOps:** `dockerfiles/Dockerfile` publica a API em container; o banco é escolhido por variável de ambiente (Oracle ou Azure SQL); `dotnet test` roda os testes no pipeline. CRUD completo em `VV_REPORTE` e `VV_CATEGORIA`.
 

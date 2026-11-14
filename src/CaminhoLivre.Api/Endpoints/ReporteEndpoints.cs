@@ -25,7 +25,8 @@ public static class ReporteEndpoints
                 ClaimsPrincipal user,
                 HttpContext http,
                 ReporteService service,
-                IdempotenciaService idempotencia) =>
+                IdempotenciaService idempotencia,
+                IArmazenamentoDeFotos armazenamento) =>
             {
                 if (string.IsNullOrWhiteSpace(chaveIdempotencia) || chaveIdempotencia.Trim().Length > 100)
                 {
@@ -39,6 +40,11 @@ public static class ReporteEndpoints
                 if (erros.Count > 0)
                 {
                     return Results.ValidationProblem(erros);
+                }
+
+                if (FotoInexistente(request.FotoUrl, armazenamento) is { } erroFoto)
+                {
+                    return erroFoto;
                 }
 
                 var usuarioId = user.ObterUsuarioId();
@@ -72,10 +78,9 @@ public static class ReporteEndpoints
                             detail: "Esta Idempotency-Key já foi usada com outro conteúdo. Gere uma nova chave para um novo reporte.");
 
                     case SituacaoIdempotencia.EmProcessamento:
-                        return Results.Problem(
-                            statusCode: StatusCodes.Status409Conflict,
-                            title: "Requisição em processamento",
-                            detail: "Uma requisição com esta Idempotency-Key ainda está sendo processada.");
+                        return Respostas.Conflito(
+                            "Uma requisição com esta Idempotency-Key ainda está sendo processada.",
+                            "Requisição em processamento");
                 }
 
                 try
@@ -103,7 +108,7 @@ public static class ReporteEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
-        grupo.MapGet("/meus", async (ClaimsPrincipal user, ReporteService service, int page = 0, int size = 10) =>
+        grupo.MapGet("/meus", async (ClaimsPrincipal user, ReporteService service, int page = 1, int size = 10) =>
             {
                 var erros = ReporteValidator.ValidarPaginacao(page, size);
                 if (erros.Count > 0)
@@ -116,7 +121,7 @@ public static class ReporteEndpoints
             })
             .RequireAuthorization(Politicas.Cidadao)
             .WithName("ListarMeusReportes")
-            .WithSummary("Lista os reportes do cidadão logado, do mais recente para o mais antigo")
+            .WithSummary("Lista os reportes do cidadão logado, do mais recente para o mais antigo (page começa em 1)")
             .Produces<PaginaResponse<ReporteResponse>>(StatusCodes.Status200OK)
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status401Unauthorized)
@@ -127,7 +132,7 @@ public static class ReporteEndpoints
                 var reporte = await service.BuscarCompletoAsync(id);
                 if (reporte is null || !await PodeVerAsync(reporte, user, service))
                 {
-                    return Results.NotFound();
+                    return ReporteNaoEncontrado();
                 }
 
                 return Results.Ok(ReporteMapper.ParaDetalhe(reporte));
@@ -136,9 +141,15 @@ public static class ReporteEndpoints
             .WithSummary("Mostra o reporte com o histórico de status (dono do reporte ou gestor do órgão)")
             .Produces<ReporteDetalheResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
-        grupo.MapPut("/{id:long}", async (long id, AtualizarReporteRequest request, ClaimsPrincipal user, ReporteService service) =>
+        grupo.MapPut("/{id:long}", async (
+                long id,
+                AtualizarReporteRequest request,
+                ClaimsPrincipal user,
+                ReporteService service,
+                IArmazenamentoDeFotos armazenamento,
+                CancellationToken cancellationToken) =>
             {
                 var erros = ReporteValidator.Validar(request);
                 if (erros.Count > 0)
@@ -149,25 +160,37 @@ public static class ReporteEndpoints
                 var reporte = await service.BuscarCompletoAsync(id);
                 if (reporte is null || reporte.UsuarioId != user.ObterUsuarioId())
                 {
-                    return Results.NotFound();
+                    return ReporteNaoEncontrado();
                 }
 
                 if (!RegrasReporte.PodeSerEditado(reporte.Status))
                 {
-                    return Conflito("O reporte só pode ser editado enquanto estiver ABERTO.");
+                    return Respostas.Conflito("O reporte só pode ser editado enquanto estiver ABERTO.");
                 }
 
+                if (request.FotoUrl != reporte.FotoUrl && FotoInexistente(request.FotoUrl, armazenamento) is { } erroFoto)
+                {
+                    return erroFoto;
+                }
+
+                var fotoAnterior = reporte.FotoUrl;
                 await service.AtualizarAsync(reporte, request);
-                return Results.Ok(ReporteMapper.ParaResponse(reporte));
+
+                if (fotoAnterior is not null && fotoAnterior != reporte.FotoUrl)
+                {
+                    await armazenamento.ExcluirAsync(fotoAnterior, cancellationToken);
+                }
+
+                return Results.Ok(ReporteMapper.ParaDetalhe(reporte));
             })
             .RequireAuthorization(Politicas.Cidadao)
             .WithName("EditarReporte")
-            .WithSummary("Edita descrição e endereço do próprio reporte enquanto estiver ABERTO")
-            .Produces<ReporteResponse>(StatusCodes.Status200OK)
+            .WithSummary("Substitui descrição, endereço e foto do próprio reporte enquanto estiver ABERTO (null = sem endereço / sem foto)")
+            .Produces<ReporteDetalheResponse>(StatusCodes.Status200OK)
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         grupo.MapPost("/{id:long}/foto", async (
@@ -181,12 +204,12 @@ public static class ReporteEndpoints
                 var reporte = await service.BuscarCompletoAsync(id);
                 if (reporte is null || reporte.UsuarioId != user.ObterUsuarioId())
                 {
-                    return Results.NotFound();
+                    return ReporteNaoEncontrado();
                 }
 
                 if (!RegrasReporte.PodeSerEditado(reporte.Status))
                 {
-                    return Conflito("A foto só pode ser alterada enquanto o reporte estiver ABERTO.");
+                    return Respostas.Conflito("A foto só pode ser alterada enquanto o reporte estiver ABERTO.");
                 }
 
                 var (extensao, erro) = await FotoValidator.ValidarAsync(foto, cancellationToken);
@@ -211,12 +234,12 @@ public static class ReporteEndpoints
             .RequireAuthorization(Politicas.Cidadao)
             .DisableAntiforgery()
             .WithName("EnviarFotoDoReporte")
-            .WithSummary("Envia ou troca a foto do próprio reporte (JPEG ou PNG, até 5 MB)")
+            .WithSummary("Envia ou troca a foto de um reporte já criado (alternativa ao POST /api/fotos)")
             .Produces<ReporteResponse>(StatusCodes.Status200OK)
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         grupo.MapDelete("/{id:long}", async (long id, ClaimsPrincipal user, ReporteService service) =>
@@ -225,12 +248,12 @@ public static class ReporteEndpoints
                 var reporte = await service.BuscarCompletoAsync(id);
                 if (reporte is null || reporte.UsuarioId != usuarioId)
                 {
-                    return Results.NotFound();
+                    return ReporteNaoEncontrado();
                 }
 
                 if (!RegrasReporte.PodeMudarStatus(reporte.Status, StatusReporte.CANCELADO))
                 {
-                    return Conflito("O reporte só pode ser cancelado enquanto estiver ABERTO.");
+                    return Respostas.Conflito("O reporte só pode ser cancelado enquanto estiver ABERTO.");
                 }
 
                 await service.CancelarAsync(reporte, usuarioId);
@@ -242,7 +265,7 @@ public static class ReporteEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         return app;
@@ -267,6 +290,13 @@ public static class ReporteEndpoints
         return false;
     }
 
-    private static IResult Conflito(string mensagem) =>
-        Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Operação não permitida", detail: mensagem);
+    private static IResult? FotoInexistente(string? fotoUrl, IArmazenamentoDeFotos armazenamento) =>
+        fotoUrl is not null && !armazenamento.Existe(fotoUrl)
+            ? Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["fotoUrl"] = ["Foto não encontrada. Envie a imagem em POST /api/fotos e use a fotoUrl devolvida."]
+            })
+            : null;
+
+    private static IResult ReporteNaoEncontrado() => Respostas.NaoEncontrado("Reporte não encontrado.");
 }

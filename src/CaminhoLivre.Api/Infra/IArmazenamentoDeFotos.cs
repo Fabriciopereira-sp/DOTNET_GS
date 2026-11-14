@@ -6,4 +6,5 @@ public interface IArmazenamentoDeFotos
 {
     Task<string> SalvarAsync(Stream conteudo, string extensao, CancellationToken cancellationToken);
     Task ExcluirAsync(string url, CancellationToken cancellationToken);
+    bool Existe(string url);
 }

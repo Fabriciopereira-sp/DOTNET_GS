@@ -21,6 +21,8 @@ public class ReporteTests(ApiFactory api)
         Assert.StartsWith("VV-", reporte!.Protocolo);
         Assert.Equal("ABERTO", reporte.Status);
         Assert.Equal("Secretaria de Obras", reporte.Orgao);
+        Assert.Equal("CALCADA", reporte.Categoria.Codigo);
+        Assert.Equal(DateTimeKind.Utc, reporte.CriadoEm.Kind);
     }
 
     [Fact]
@@ -56,9 +58,9 @@ public class ReporteTests(ApiFactory api)
         await maria.CriarReporteComSucessoAsync();
         await joao.CriarReporteComSucessoAsync();
 
-        var pagina = await maria.GetFromJsonAsync<PaginaResponse<ReporteResponse>>("/api/reportes/meus?page=0&size=10");
+        var pagina = await maria.GetFromJsonAsync<PaginaResponse<ReporteResponse>>("/api/reportes/meus?page=1&size=10");
 
-        Assert.Equal(2, pagina!.TotalItens);
+        Assert.Equal(2, pagina!.Total);
     }
 
     [Fact]
@@ -93,7 +95,7 @@ public class ReporteTests(ApiFactory api)
 
         var cancelamento = await cliente.DeleteAsync($"/api/reportes/{reporte.Id}");
         var edicao = await cliente.PutAsJsonAsync($"/api/reportes/{reporte.Id}",
-            new AtualizarReporteRequest("Descrição nova depois de cancelado", null));
+            new AtualizarReporteRequest("Descrição nova depois de cancelado", null, null));
 
         Assert.Equal(HttpStatusCode.NoContent, cancelamento.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, edicao.StatusCode);

@@ -9,11 +9,12 @@ public static class FotoValidator
 
     // Confere o conteúdo real do arquivo (os primeiros bytes), não só a extensão.
     // Assim um .exe renomeado para .jpg é recusado.
-    public static async Task<(string? Extensao, string? Erro)> ValidarAsync(IFormFile? foto, CancellationToken cancellationToken)
+    public static async Task<(string? Extensao, string? Erro)> ValidarAsync(
+        IFormFile? foto, CancellationToken cancellationToken, string campo = "foto")
     {
         if (foto is null || foto.Length == 0)
         {
-            return (null, "Envie a foto no campo 'foto'.");
+            return (null, $"Envie a foto no campo '{campo}'.");
         }
 
         if (foto.Length > TamanhoMaximo)

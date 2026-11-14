@@ -80,8 +80,27 @@ public class ReporteValidatorTests
         Assert.Contains("urgencia", erros.Keys);
     }
 
+    [Fact]
+    public void Validar_FotoUrlGeradaPelaApi_EAceita()
+    {
+        var request = RequestValido() with { FotoUrl = "/uploads/0123456789abcdef0123456789abcdef.jpg" };
+
+        Assert.Empty(ReporteValidator.Validar(request));
+    }
+
     [Theory]
-    [InlineData(-1, 10, "page")]
+    [InlineData("https://site-externo.com/foto.jpg")]
+    [InlineData("/uploads/../appsettings.json")]
+    [InlineData("/uploads/foto.exe")]
+    public void Validar_FotoUrlDeFora_RetornaErro(string fotoUrl)
+    {
+        var erros = ReporteValidator.Validar(RequestValido() with { FotoUrl = fotoUrl });
+
+        Assert.Contains("fotoUrl", erros.Keys);
+    }
+
+    [Theory]
+    [InlineData(0, 10, "page")]
     [InlineData(0, 0, "size")]
     [InlineData(0, 51, "size")]
     public void ValidarPaginacao_ValoresInvalidos_RetornaErro(int pagina, int tamanho, string campo)

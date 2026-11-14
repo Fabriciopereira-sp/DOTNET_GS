@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using CaminhoLivre.Api.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace CaminhoLivre.Api.Data;
 
@@ -74,6 +75,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Chave).HasMaxLength(100);
             e.Property(x => x.HashCorpo).HasMaxLength(64).IsRequired();
         });
+
+        // Datas são gravadas em UTC. Ao ler, marca como UTC para o JSON sair no formato ISO 8601 com "Z".
+        var utc = new ValueConverter<DateTime, DateTime>(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+        foreach (var propriedade in modelBuilder.Model.GetEntityTypes()
+                     .SelectMany(e => e.GetProperties())
+                     .Where(p => p.ClrType == typeof(DateTime)))
+        {
+            propriedade.SetValueConverter(utc);
+        }
 
         // Padrão do banco do grupo: colunas em maiúsculas separadas por underline (ex.: ORGAO_ID)
         foreach (var entidade in modelBuilder.Model.GetEntityTypes())

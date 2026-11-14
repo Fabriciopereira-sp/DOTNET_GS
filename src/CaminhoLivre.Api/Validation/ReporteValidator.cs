@@ -1,10 +1,15 @@
+using System.Text.RegularExpressions;
 using CaminhoLivre.Api.Contracts;
 using CaminhoLivre.Api.Domain;
 
 namespace CaminhoLivre.Api.Validation;
 
-public static class ReporteValidator
+public static partial class ReporteValidator
 {
+    // Só aceita URLs de foto geradas pela própria API (POST /api/fotos), nunca links externos.
+    [GeneratedRegex("^/uploads/[a-f0-9]{32}\\.(jpg|png)$")]
+    private static partial Regex FormatoFotoUrl();
+
     public static Dictionary<string, string[]> Validar(CriarReporteRequest request)
     {
         var erros = new Dictionary<string, string[]>();
@@ -27,6 +32,7 @@ public static class ReporteValidator
         }
 
         ValidarEndereco(request.Endereco, erros);
+        ValidarFotoUrl(request.FotoUrl, erros);
 
         if (!Enum.TryParse<Urgencia>(request.Urgencia, ignoreCase: true, out _) || int.TryParse(request.Urgencia, out _))
         {
@@ -41,6 +47,7 @@ public static class ReporteValidator
         var erros = new Dictionary<string, string[]>();
         ValidarDescricao(request.Descricao, erros);
         ValidarEndereco(request.Endereco, erros);
+        ValidarFotoUrl(request.FotoUrl, erros);
         return erros;
     }
 
@@ -48,9 +55,9 @@ public static class ReporteValidator
     {
         var erros = new Dictionary<string, string[]>();
 
-        if (pagina < 0)
+        if (pagina < 1)
         {
-            erros["page"] = ["A página começa em 0."];
+            erros["page"] = ["A página começa em 1."];
         }
 
         if (tamanho is < 1 or > 50)
@@ -75,6 +82,14 @@ public static class ReporteValidator
         if (endereco?.Length > 200)
         {
             erros["endereco"] = ["O endereço pode ter no máximo 200 caracteres."];
+        }
+    }
+
+    private static void ValidarFotoUrl(string? fotoUrl, Dictionary<string, string[]> erros)
+    {
+        if (fotoUrl is not null && !FormatoFotoUrl().IsMatch(fotoUrl))
+        {
+            erros["fotoUrl"] = ["Foto inválida. Envie a imagem em POST /api/fotos e use a fotoUrl devolvida."];
         }
     }
 }

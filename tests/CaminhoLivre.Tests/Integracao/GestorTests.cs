@@ -32,7 +32,7 @@ public class GestorTests(ApiFactory api)
         var detalhe = await resposta.Content.ReadFromJsonAsync<ReporteDetalheResponse>();
 
         Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
-        Assert.Equal("EM_ANALISE", detalhe!.Reporte.Status);
+        Assert.Equal("EM_ANALISE", detalhe!.Status);
         Assert.Equal(2, detalhe.Historico.Count());
     }
 
